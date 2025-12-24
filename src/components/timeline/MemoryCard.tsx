@@ -21,7 +21,7 @@ export const MemoryCard = memo(function MemoryCard({
     <button
       onClick={onClick}
       className={cn(
-        "relative aspect-square rounded-xl overflow-hidden group",
+        "relative aspect-[9/16] rounded-xl overflow-hidden group",
         "bg-card transition-all duration-200",
         "hover:ring-2 hover:ring-primary/50 hover:scale-[1.02]",
         "focus:outline-none focus:ring-2 focus:ring-primary",
