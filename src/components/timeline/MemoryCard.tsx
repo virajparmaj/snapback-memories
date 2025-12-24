@@ -20,8 +20,9 @@ export const MemoryCard = memo(function MemoryCard({
   return (
     <button
       onClick={onClick}
+      style={{ aspectRatio: "9 / 16" }}
       className={cn(
-        "relative aspect-[9/16] rounded-xl overflow-hidden group",
+        "relative w-full rounded-xl overflow-hidden group",
         "bg-card transition-all duration-200",
         "hover:ring-2 hover:ring-primary/50 hover:scale-[1.02]",
         "focus:outline-none focus:ring-2 focus:ring-primary",
@@ -37,7 +38,7 @@ export const MemoryCard = memo(function MemoryCard({
           onLoad={() => setIsLoaded(true)}
           onError={() => setHasError(true)}
           className={cn(
-            "w-full h-full object-cover transition-opacity duration-300",
+            "absolute inset-0 w-full h-full object-cover transition-opacity duration-300",
             isLoaded ? "opacity-100" : "opacity-0"
           )}
         />

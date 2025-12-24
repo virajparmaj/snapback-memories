@@ -19,12 +19,21 @@ import { cn } from "@/lib/utils";
 
 // Number of columns based on screen width
 const getColumns = (width: number) => {
-  if (width >= 1536) return 8;
-  if (width >= 1280) return 6;
-  if (width >= 1024) return 5;
-  if (width >= 768) return 4;
+  if (width >= 1536) return 6;
+  if (width >= 1280) return 5;
+  if (width >= 1024) return 4;
+  if (width >= 768) return 3;
   if (width >= 640) return 3;
   return 2;
+};
+
+// Calculate row height based on column width and 9:16 aspect ratio
+const getRowHeight = (containerWidth: number, columns: number, gap: number = 8) => {
+  const totalGaps = (columns - 1) * gap;
+  const availableWidth = containerWidth - 32 - totalGaps; // 32px for container padding
+  const cardWidth = availableWidth / columns;
+  const cardHeight = cardWidth * (16 / 9);
+  return cardHeight + gap; // Add gap for spacing between rows
 };
 
 export default function TimelinePage() {
@@ -131,12 +140,15 @@ export default function TimelinePage() {
     return result;
   }, [groupedMemories, columns]);
 
+  // Calculate row height for virtualization
+  const rowHeight = useMemo(() => getRowHeight(containerWidth, columns), [containerWidth, columns]);
+
   // Virtualizer
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => containerRef.current,
-    estimateSize: (index) => (rows[index].type === "header" ? 48 : 160),
-    overscan: 5,
+    estimateSize: (index) => (rows[index].type === "header" ? 48 : rowHeight),
+    overscan: 3,
   });
 
   // Track active month for scrubber
@@ -361,6 +373,7 @@ export default function TimelinePage() {
                         className="grid gap-2"
                         style={{
                           gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+                          gridAutoRows: "auto",
                         }}
                       >
                         {(row.data as MemoryItem[]).map((memory) => (
