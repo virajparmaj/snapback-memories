@@ -76,7 +76,10 @@ class MockApiAdapter implements ApiAdapter {
     // Simulate progress
     const interval = setInterval(() => {
       if (this.indexingState.progress.scanned < this.indexingState.progress.total) {
-        this.indexingState.progress.scanned += Math.floor(Math.random() * 200) + 100;
+        this.indexingState.progress.scanned = Math.min(
+          this.indexingState.progress.scanned + Math.floor(Math.random() * 200) + 100,
+          this.indexingState.progress.total
+        );
         this.indexingState.logs.push(
           `Processed ${this.indexingState.progress.scanned} items...`
         );

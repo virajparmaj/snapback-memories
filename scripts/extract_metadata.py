@@ -1,3 +1,4 @@
+import argparse
 import csv
 from datetime import datetime
 from pathlib import Path
@@ -8,9 +9,6 @@ from pymediainfo import MediaInfo
 # =========================
 # Configuration
 # =========================
-
-INPUT_DIR = Path("/Volumes/Samsung_T9/SnapBack_Work/final_media")
-OUTPUT_CSV = Path("/Volumes/Samsung_T9/SnapBack_Work/manifest.csv")
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png"}
 VIDEO_EXTS = {".mp4"}
@@ -26,8 +24,15 @@ def parse_zip_uuid(filename: str) -> str:
     """
     Extract ZIP UUID (memory ID) from filename.
     Example: <ZIP_UUID>-FINAL.mp4 → ZIP_UUID
+             <ZIP_UUID>-RAW.jpg  → ZIP_UUID
+    Handles UUIDs that contain hyphens by splitting on the known suffixes.
     """
-    return filename.split("-")[0]
+    stem = Path(filename).stem  # drop extension
+    for suffix in ("-FINAL", "-RAW"):
+        if stem.endswith(suffix):
+            return stem[: -len(suffix)]
+    # Fallback: return full stem if no known suffix
+    return stem
 
 
 def dms_to_decimal(coord, ref):
@@ -102,68 +107,85 @@ def extract_video_meta(path: Path) -> dict:
 # Main extraction
 # =========================
 
-rows = []
+def main():
+    ap = argparse.ArgumentParser(description="Extract metadata from processed Snapchat media")
+    ap.add_argument("--input", required=True, help="Folder containing processed media files (final_media/)")
+    ap.add_argument("--output", required=True, help="Output CSV path for the manifest")
+    args = ap.parse_args()
 
-for file in sorted(INPUT_DIR.iterdir()):
+    input_dir = Path(args.input)
+    output_csv = Path(args.output)
 
-    # ---- hard filters ----
-    if not file.is_file():
-        continue
+    if not input_dir.is_dir():
+        raise FileNotFoundError(f"Input directory not found: {input_dir}")
 
-    if file.name.startswith("._"):
-        continue
+    rows = []
 
-    if file.stat().st_size < MIN_VALID_SIZE:
-        continue
+    for file in sorted(input_dir.iterdir()):
 
-    ext = file.suffix.lower()
-    if ext not in IMAGE_EXTS and ext not in VIDEO_EXTS:
-        continue
+        # ---- hard filters ----
+        if not file.is_file():
+            continue
 
-    # ---- base record ----
-    zip_uuid = parse_zip_uuid(file.name)
+        if file.name.startswith("._"):
+            continue
 
-    record = {
-        "filename": file.name,
-        "zip_uuid": zip_uuid,
-        "media_type": "photo" if ext in IMAGE_EXTS else "video",
-        "file_size_bytes": file.stat().st_size,
-        "captured_at": None,
-        "timezone": None,          # filled later
-        "latitude": None,
-        "longitude": None,
-        "duration_seconds": None,
-        "notes": None,
-    }
+        if file.stat().st_size < MIN_VALID_SIZE:
+            continue
 
-    try:
-        if ext in IMAGE_EXTS:
-            meta = extract_image_exif(file)
-            record.update(meta)
+        ext = file.suffix.lower()
+        if ext not in IMAGE_EXTS and ext not in VIDEO_EXTS:
+            continue
 
-        else:
-            meta = extract_video_meta(file)
-            record.update(meta)
+        # ---- base record ----
+        zip_uuid = parse_zip_uuid(file.name)
 
-        if record["captured_at"] is None:
-            record["notes"] = "timestamp_missing"
+        record = {
+            "filename": file.name,
+            "zip_uuid": zip_uuid,
+            "media_type": "photo" if ext in IMAGE_EXTS else "video",
+            "file_size_bytes": file.stat().st_size,
+            "captured_at": None,
+            "timezone": None,          # filled later
+            "latitude": None,
+            "longitude": None,
+            "duration_seconds": None,
+            "notes": None,
+        }
 
-    except Exception as e:
-        record["notes"] = f"error:{type(e).__name__}"
+        try:
+            if ext in IMAGE_EXTS:
+                meta = extract_image_exif(file)
+                record.update(meta)
 
-    rows.append(record)
+            else:
+                meta = extract_video_meta(file)
+                record.update(meta)
 
-# =========================
-# Write CSV
-# =========================
+            if record["captured_at"] is None:
+                record["notes"] = "timestamp_missing"
 
-if not rows:
-    raise RuntimeError("No valid media files found. Check INPUT_DIR.")
+        except Exception as e:
+            record["notes"] = f"error:{type(e).__name__}"
 
-with open(OUTPUT_CSV, "w", newline="") as f:
-    writer = csv.DictWriter(f, fieldnames=rows[0].keys())
-    writer.writeheader()
-    writer.writerows(rows)
+        rows.append(record)
 
-print(f"Metadata extracted → {OUTPUT_CSV}")
-print(f"Total records written: {len(rows)}")
+    # =========================
+    # Write CSV
+    # =========================
+
+    if not rows:
+        raise RuntimeError(f"No valid media files found in {input_dir}")
+
+    output_csv.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_csv, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=rows[0].keys())
+        writer.writeheader()
+        writer.writerows(rows)
+
+    print(f"Metadata extracted -> {output_csv}")
+    print(f"Total records written: {len(rows)}")
+
+
+if __name__ == "__main__":
+    main()

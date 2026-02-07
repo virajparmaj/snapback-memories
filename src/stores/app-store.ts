@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { MemoryItem, MonthSummary, MediaFilter, TimeDisplayMode } from "@/types/memory";
+import { MonthSummary, MediaFilter, TimeDisplayMode } from "@/types/memory";
+import { USE_MOCK } from "@/lib/api/adapter";
 
 interface AppState {
   // Library state
@@ -21,7 +22,6 @@ interface AppState {
 
   // Cached data
   months: MonthSummary[];
-  currentMemories: MemoryItem[];
 
   // Actions
   setLibraryConnected: (connected: boolean, path?: string) => void;
@@ -34,19 +34,16 @@ interface AppState {
   setScrollToMonth: (month: { year: number; month: number } | null) => void;
   setTimeDisplayMode: (mode: TimeDisplayMode) => void;
   setMonths: (months: MonthSummary[]) => void;
-  setCurrentMemories: (memories: MemoryItem[]) => void;
-  updateMemoryFavorite: (id: string, favorite: boolean) => void;
-  updateMemoryTags: (id: string, tags: string[]) => void;
 }
 
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
-      // Initial state
-      isLibraryConnected: true, // Start as connected for mock mode
-      libraryPath: "/Users/demo/Snapchat/Memories",
-      totalItems: 8016,
-      lastIndexedAt: new Date().toISOString(),
+      // Initial state — only pre-fill when running mock mode
+      isLibraryConnected: USE_MOCK,
+      libraryPath: USE_MOCK ? "/Users/demo/Snapchat/Memories" : null,
+      totalItems: USE_MOCK ? 8016 : 0,
+      lastIndexedAt: USE_MOCK ? new Date().toISOString() : null,
 
       selectedMemoryId: null,
       isViewerOpen: false,
@@ -57,7 +54,6 @@ export const useAppStore = create<AppState>()(
       timeDisplayMode: "local",
 
       months: [],
-      currentMemories: [],
 
       // Actions
       setLibraryConnected: (connected, path) =>
@@ -81,22 +77,6 @@ export const useAppStore = create<AppState>()(
       setTimeDisplayMode: (mode) => set({ timeDisplayMode: mode }),
 
       setMonths: (months) => set({ months }),
-
-      setCurrentMemories: (memories) => set({ currentMemories: memories }),
-
-      updateMemoryFavorite: (id, favorite) =>
-        set((state) => ({
-          currentMemories: state.currentMemories.map((m) =>
-            m.id === id ? { ...m, favorite } : m
-          ),
-        })),
-
-      updateMemoryTags: (id, tags) =>
-        set((state) => ({
-          currentMemories: state.currentMemories.map((m) =>
-            m.id === id ? { ...m, tags } : m
-          ),
-        })),
     }),
     {
       name: "snapback-storage",

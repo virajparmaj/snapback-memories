@@ -10,7 +10,6 @@ import {
   Clock,
   Image,
   MapPin,
-  FolderSync
 } from "lucide-react";
 import { api } from "@/lib/api/adapter";
 import { Button } from "@/components/ui/button";
@@ -128,27 +127,17 @@ export default function ImportPage() {
                     </div>
                   </div>
 
-                  <div className="flex gap-2">
-                    <Button
-                      variant="secondary"
-                      className="flex-1"
-                      onClick={() => startIndexing.mutate()}
-                      disabled={isIndexing}
-                    >
-                      <RefreshCw
-                        className={cn("h-4 w-4 mr-2", isIndexing && "animate-spin")}
-                      />
-                      Re-index
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      className="flex-1"
-                      disabled={isIndexing}
-                    >
-                      <FolderSync className="h-4 w-4 mr-2" />
-                      Incremental Update
-                    </Button>
-                  </div>
+                  <Button
+                    variant="secondary"
+                    className="w-full"
+                    onClick={() => startIndexing.mutate()}
+                    disabled={isIndexing}
+                  >
+                    <RefreshCw
+                      className={cn("h-4 w-4 mr-2", isIndexing && "animate-spin")}
+                    />
+                    Re-index
+                  </Button>
                 </>
               ) : (
                 <div className="flex items-start gap-3 p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/20">

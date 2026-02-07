@@ -1,16 +1,16 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { CalendarDays, Shuffle, Play, ChevronRight } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { CalendarDays } from "lucide-react";
 import { api } from "@/lib/api/adapter";
 import { MemoryCard } from "@/components/timeline/MemoryCard";
 import { MemoryViewerDrawer } from "@/components/viewer/MemoryViewerDrawer";
-import { Button } from "@/components/ui/button";
 import { useAppStore } from "@/stores/app-store";
 import { cn } from "@/lib/utils";
 
 export default function OnThisDayPage() {
   const [windowDays, setWindowDays] = useState(3);
-  const { timeDisplayMode, updateMemoryFavorite, updateMemoryTags } = useAppStore();
+  const { timeDisplayMode } = useAppStore();
+  const queryClient = useQueryClient();
 
   const today = new Date();
   const currentMonth = today.getMonth() + 1;
@@ -90,16 +90,6 @@ export default function OnThisDayPage() {
             </div>
 
             <div className="flex-1" />
-
-            {/* Quick actions */}
-            <Button variant="secondary" size="sm">
-              <Shuffle className="h-4 w-4 mr-2" />
-              Shuffle
-            </Button>
-            <Button size="sm">
-              <Play className="h-4 w-4 mr-2" />
-              Play Highlights
-            </Button>
           </div>
         </div>
       </div>
@@ -134,10 +124,6 @@ export default function OnThisDayPage() {
                     {items.length} {items.length === 1 ? "memory" : "memories"}
                   </span>
                   <div className="flex-1 h-px bg-border" />
-                  <Button variant="ghost" size="sm" className="text-muted-foreground">
-                    View all
-                    <ChevronRight className="h-4 w-4 ml-1" />
-                  </Button>
                 </div>
 
                 {/* Grid */}
@@ -159,21 +145,6 @@ export default function OnThisDayPage() {
           </div>
         )}
 
-        {/* This week section */}
-        {memories.length > 0 && (
-          <div className="mt-12 pt-8 border-t border-border">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Also this week</h2>
-              <Button variant="ghost" size="sm" className="text-muted-foreground">
-                See all
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
-            <p className="text-muted-foreground text-sm">
-              More memories from around this time of year coming soon...
-            </p>
-          </div>
-        )}
       </div>
 
       {/* Viewer */}
@@ -191,8 +162,14 @@ export default function OnThisDayPage() {
             ? () => setSelectedId(memories[selectedIndex + 1].id)
             : undefined
         }
-        onFavoriteToggle={updateMemoryFavorite}
-        onTagsUpdate={updateMemoryTags}
+        onFavoriteToggle={(id, fav) => {
+          api.setFavorite(id, fav);
+          queryClient.invalidateQueries({ queryKey: ["on-this-day"] });
+        }}
+        onTagsUpdate={(id, tags) => {
+          api.setTags(id, tags);
+          queryClient.invalidateQueries({ queryKey: ["on-this-day"] });
+        }}
         timeDisplayMode={timeDisplayMode}
       />
     </div>

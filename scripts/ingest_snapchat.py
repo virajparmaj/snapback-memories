@@ -1,4 +1,5 @@
 import argparse
+import csv
 import os
 import shutil
 import subprocess
@@ -213,10 +214,11 @@ def main():
         except Exception as e:
             results.append(("error", p.name, repr(e)))
 
-    with open(log_file, "w") as f:
-        f.write("status,input,detail\n")
+    with open(log_file, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["status", "input", "detail"])
         for status, name, detail in results:
-            f.write(f"{status},{name},{detail.replace(',', ' ')}\n")
+            writer.writerow([status, name, detail])
 
     print(f"Done. Wrote log: {log_file}")
     print(f"Output folder: {out_dir}")

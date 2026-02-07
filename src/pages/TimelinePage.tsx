@@ -1,6 +1,6 @@
-import { useEffect, useRef, useMemo, useCallback, useState } from "react";
+import { useEffect, useRef, useMemo, useCallback, useState, useDeferredValue } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { Search, CalendarDays } from "lucide-react";
 import { MemoryCard } from "@/components/timeline/MemoryCard";
 import { MonthScrubber } from "@/components/timeline/MonthScrubber";
@@ -41,6 +41,8 @@ export default function TimelinePage() {
   const [containerWidth, setContainerWidth] = useState(1200);
   const columns = getColumns(containerWidth);
 
+  const queryClient = useQueryClient();
+
   const {
     activeFilter,
     setFilter,
@@ -53,10 +55,10 @@ export default function TimelinePage() {
     selectedMemoryId,
     closeViewer,
     timeDisplayMode,
-    setCurrentMemories,
-    updateMemoryFavorite,
-    updateMemoryTags,
   } = useAppStore();
+
+  // Debounce search query so we don't refetch on every keystroke
+  const deferredSearch = useDeferredValue(searchQuery);
 
   // Fetch months summary
   const { data: months = [] } = useQuery({
@@ -64,7 +66,7 @@ export default function TimelinePage() {
     queryFn: () => api.getMonths(),
   });
 
-  // Fetch all memories with infinite scroll
+  // Fetch all memories with infinite scroll (uses deferred search for debouncing)
   const {
     data,
     fetchNextPage,
@@ -72,24 +74,23 @@ export default function TimelinePage() {
     isFetchingNextPage,
     isLoading,
   } = useInfiniteQuery({
-    queryKey: ["memories", activeFilter, searchQuery],
+    queryKey: ["memories", activeFilter, deferredSearch],
     queryFn: ({ pageParam }) =>
       api.getMemories({
         cursor: pageParam,
         limit: 200,
         filter: activeFilter,
-        search: searchQuery || undefined,
+        search: deferredSearch || undefined,
       }),
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     initialPageParam: undefined as string | undefined,
   });
 
   // Flatten all memories
-  const allMemories = useMemo(() => {
-    const items = data?.pages.flatMap((page) => page.items) ?? [];
-    setCurrentMemories(items);
-    return items;
-  }, [data?.pages, setCurrentMemories]);
+  const allMemories = useMemo(
+    () => data?.pages.flatMap((page) => page.items) ?? [],
+    [data?.pages]
+  );
 
   // Group memories by month
   const groupedMemories = useMemo(() => {
@@ -186,25 +187,25 @@ export default function TimelinePage() {
   }, [scrollToMonth, rows, virtualizer, setScrollToMonth]);
 
   // Update active month based on scroll position
+  const virtualItems = virtualizer.getVirtualItems();
+  const firstVisibleIndex = virtualItems.length > 0 ? virtualItems[0].index : -1;
+
   useEffect(() => {
-    const items = virtualizer.getVirtualItems();
-    if (items.length > 0) {
-      const firstVisible = items[0];
-      let headerIndex = firstVisible.index;
+    if (firstVisibleIndex < 0) return;
 
-      // Find the closest header above the current position
-      while (headerIndex >= 0 && rows[headerIndex].type !== "header") {
-        headerIndex--;
-      }
-
-      if (headerIndex >= 0 && rows[headerIndex].type === "header") {
-        const headerData = rows[headerIndex].data as { year: number; month: number };
-        if (activeMonth?.year !== headerData.year || activeMonth?.month !== headerData.month) {
-          setActiveMonth(headerData);
-        }
-      }
+    let headerIndex = firstVisibleIndex;
+    while (headerIndex >= 0 && rows[headerIndex].type !== "header") {
+      headerIndex--;
     }
-  }, [virtualizer.getVirtualItems(), rows, activeMonth]);
+
+    if (headerIndex >= 0 && rows[headerIndex].type === "header") {
+      const headerData = rows[headerIndex].data as { year: number; month: number };
+      setActiveMonth((prev) => {
+        if (prev?.year === headerData.year && prev?.month === headerData.month) return prev;
+        return headerData;
+      });
+    }
+  }, [firstVisibleIndex, rows]);
 
   // Load more when scrolling near bottom
   useEffect(() => {
@@ -426,8 +427,14 @@ export default function TimelinePage() {
         onClose={closeViewer}
         onPrev={currentMemoryIndex > 0 ? handlePrev : undefined}
         onNext={currentMemoryIndex < allMemories.length - 1 ? handleNext : undefined}
-        onFavoriteToggle={updateMemoryFavorite}
-        onTagsUpdate={updateMemoryTags}
+        onFavoriteToggle={(id, fav) => {
+          api.setFavorite(id, fav);
+          queryClient.invalidateQueries({ queryKey: ["memories"] });
+        }}
+        onTagsUpdate={(id, tags) => {
+          api.setTags(id, tags);
+          queryClient.invalidateQueries({ queryKey: ["memories"] });
+        }}
         timeDisplayMode={timeDisplayMode}
       />
     </div>

@@ -35,10 +35,10 @@ const TAGS_POOL = [
   [],
 ];
 
-// Generate a random UUID
-function generateUUID(): string {
+// Generate a UUID using a provided RNG for deterministic output
+function generateUUID(random: () => number): string {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
+    const r = (random() * 16) | 0;
     const v = c === "x" ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
@@ -57,14 +57,32 @@ export function generateMockMemories(count: number = 8016): MemoryItem[] {
   const random = seededRandom(42);
   const memories: MemoryItem[] = [];
 
-  const startYear = 2020;
-  const endYear = 2025;
+  // Use current date so recent windows (7/30/90 days) have data
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const startYear = currentYear - 5;
+  const endYear = currentYear;
+
+  // Reserve ~5% of items for the last 90 days so Recaps page works
+  const recentCount = Math.floor(count * 0.05);
+  const historicalCount = count - recentCount;
 
   for (let i = 0; i < count; i++) {
-    const year = startYear + Math.floor(random() * (endYear - startYear + 1));
-    const month = 1 + Math.floor(random() * 12);
-    const daysInMonth = new Date(year, month, 0).getDate();
-    const day = 1 + Math.floor(random() * daysInMonth);
+    let year: number, month: number, day: number;
+
+    if (i >= historicalCount) {
+      // Generate recent memories within last 90 days
+      const daysAgo = Math.floor(random() * 90);
+      const recentDate = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+      year = recentDate.getFullYear();
+      month = recentDate.getMonth() + 1;
+      day = recentDate.getDate();
+    } else {
+      year = startYear + Math.floor(random() * (endYear - startYear + 1));
+      month = 1 + Math.floor(random() * 12);
+      const daysInMonth = new Date(year, month, 0).getDate();
+      day = 1 + Math.floor(random() * daysInMonth);
+    }
 
     const hour = Math.floor(random() * 24);
     const minute = Math.floor(random() * 60);
@@ -78,7 +96,7 @@ export function generateMockMemories(count: number = 8016): MemoryItem[] {
     const isFavorite = random() < 0.1;
 
     const memory: MemoryItem = {
-      id: generateUUID(),
+      id: generateUUID(random),
       type: isVideo ? "video" : "photo",
       filename_original: isVideo
         ? `SNAP_${year}${String(month).padStart(2, "0")}${String(day).padStart(2, "0")}_${i}.mp4`
@@ -103,8 +121,6 @@ export function generateMockMemories(count: number = 8016): MemoryItem[] {
       memory.duration_sec = Math.floor(random() * 60) + 1;
     }
 
-    // Generate placeholder thumbnail URL using a gradient pattern
-    const hue = (year * 50 + month * 20 + day * 5) % 360;
     memory.thumbnail_url = `https://picsum.photos/seed/${memory.id.slice(0, 8)}/300/300`;
 
     memories.push(memory);
@@ -148,21 +164,25 @@ export function getOnThisDayMemories(
   day: number,
   windowDays: number = 3
 ): MemoryItem[] {
+  // Convert month/day to day-of-year for wraparound-safe comparison
+  const targetDOY = dayOfYear(month, day);
+
   return memories.filter((memory) => {
     const memoryDate = new Date(memory.captured_at_utc);
-    const memoryMonth = memoryDate.getMonth() + 1;
-    const memoryDay = memoryDate.getDate();
+    const memoryDOY = dayOfYear(memoryDate.getMonth() + 1, memoryDate.getDate());
 
-    // Check if within window
-    const targetDate = new Date(2000, month - 1, day);
-    const checkDate = new Date(2000, memoryMonth - 1, memoryDay);
+    // Circular distance handles year boundaries (Dec 30 ± 3 matches Jan 2)
+    const diff = Math.abs(targetDOY - memoryDOY);
+    const circularDiff = Math.min(diff, 365 - diff);
 
-    const diffDays = Math.abs(
-      (targetDate.getTime() - checkDate.getTime()) / (1000 * 60 * 60 * 24)
-    );
-
-    return diffDays <= windowDays;
+    return circularDiff <= windowDays;
   });
+}
+
+// Approximate day-of-year (non-leap) for circular date comparison
+function dayOfYear(month: number, day: number): number {
+  const daysBeforeMonth = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+  return daysBeforeMonth[month - 1] + day;
 }
 
 // Get memories for a specific month

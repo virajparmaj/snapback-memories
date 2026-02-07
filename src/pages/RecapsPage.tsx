@@ -1,13 +1,12 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { 
-  Sparkles, 
-  ImageIcon, 
-  Video, 
-  MapPin, 
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Sparkles,
+  ImageIcon,
+  Video,
+  MapPin,
   TrendingUp,
   ChevronRight,
-  Play
 } from "lucide-react";
 import { api } from "@/lib/api/adapter";
 import { MemoryCard } from "@/components/timeline/MemoryCard";
@@ -19,7 +18,8 @@ import { cn } from "@/lib/utils";
 
 export default function RecapsPage() {
   const [recapDays, setRecapDays] = useState(7);
-  const { timeDisplayMode, updateMemoryFavorite, updateMemoryTags } = useAppStore();
+  const { timeDisplayMode } = useAppStore();
+  const queryClient = useQueryClient();
 
   const { data: recap, isLoading } = useQuery({
     queryKey: ["recap", recapDays],
@@ -190,10 +190,6 @@ export default function RecapsPage() {
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold">Highlights</h2>
-                <Button size="sm">
-                  <Play className="h-4 w-4 mr-2" />
-                  Play Reel
-                </Button>
               </div>
 
               {memories.length === 0 ? (
@@ -245,8 +241,14 @@ export default function RecapsPage() {
             ? () => setSelectedId(memories[selectedIndex + 1].id)
             : undefined
         }
-        onFavoriteToggle={updateMemoryFavorite}
-        onTagsUpdate={updateMemoryTags}
+        onFavoriteToggle={(id, fav) => {
+          api.setFavorite(id, fav);
+          queryClient.invalidateQueries({ queryKey: ["recap"] });
+        }}
+        onTagsUpdate={(id, tags) => {
+          api.setTags(id, tags);
+          queryClient.invalidateQueries({ queryKey: ["recap"] });
+        }}
         timeDisplayMode={timeDisplayMode}
       />
     </div>

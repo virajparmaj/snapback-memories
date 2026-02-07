@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
-import { X, Heart, MapPin, Calendar, Clock, Tag, Copy, ExternalLink, ChevronLeft, ChevronRight, Play, Pause } from "lucide-react";
+import { useState, useCallback, useRef } from "react";
+import { X, Heart, MapPin, Calendar, Clock, Tag, Copy, ChevronLeft, ChevronRight, Play, Pause } from "lucide-react";
 import { MemoryItem, TimeDisplayMode } from "@/types/memory";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,7 @@ export function MemoryViewerDrawer({
   const { toast } = useToast();
   const [isPlaying, setIsPlaying] = useState(false);
   const [newTag, setNewTag] = useState("");
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const handleAddTag = useCallback(() => {
     if (!memory || !newTag.trim()) return;
@@ -151,24 +152,31 @@ export function MemoryViewerDrawer({
         {/* Media viewer */}
         <div className="flex-1 bg-background flex items-center justify-center p-4 overflow-hidden">
           {memory.type === "video" ? (
-            <div className="relative w-full max-w-lg aspect-square">
-              <img
-                src={memory.thumbnail_url}
-                alt={memory.filename_original}
+            <div className="relative w-full max-w-lg">
+              <video
+                ref={videoRef}
+                src={mediaUrl}
+                poster={memory.thumbnail_url}
                 className="w-full h-full object-contain rounded-xl"
+                controls={isPlaying}
+                playsInline
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                onEnded={() => setIsPlaying(false)}
               />
-              <button
-                onClick={() => setIsPlaying(!isPlaying)}
-                className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors rounded-xl"
-              >
-                <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center glow-primary">
-                  {isPlaying ? (
-                    <Pause className="h-8 w-8 text-primary-foreground" />
-                  ) : (
+              {!isPlaying && (
+                <button
+                  onClick={() => {
+                    videoRef.current?.play();
+                    setIsPlaying(true);
+                  }}
+                  className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors rounded-xl"
+                >
+                  <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center">
                     <Play className="h-8 w-8 text-primary-foreground ml-1" />
-                  )}
-                </div>
-              </button>
+                  </div>
+                </button>
+              )}
             </div>
           ) : (
             <img
@@ -279,10 +287,6 @@ export function MemoryViewerDrawer({
               Copy Path
             </Button>
 
-            <Button variant="secondary" size="sm">
-              <ExternalLink className="h-4 w-4 mr-1.5" />
-              Open in Finder
-            </Button>
           </div>
         </div>
       </div>
