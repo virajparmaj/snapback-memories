@@ -16,7 +16,7 @@ import {
 } from "@/lib/mock-data";
 
 // Toggle between mock and real API
-export const USE_MOCK = true;
+export const USE_MOCK = false;
 const API_BASE = "http://localhost:5055";
 
 // API Interface

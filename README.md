@@ -1,77 +1,107 @@
-                                                                                                     
-  Files Changed                                                                                      
-  #: 1                                                                               
-  Fix: Seeded UUIDs — generateUUID() now takes the seeded RNG instead of Math.random(), so IDs are   
-    stable across reloads                                                                            
-  File(s): src/lib/mock-data.ts
-  ────────────────────────────────────────                                                           
-  #: 2                                                                                               
-  Fix: Side effect in render — Moved setCurrentMemories out of useMemo (removed entirely since React 
-    Query is now the single source of truth)                                                         
-  File(s): src/pages/TimelinePage.tsx                                                                
-  ────────────────────────────────────────                                                           
-  #: 3                                                                                               
-  Fix: Virtualizer infinite re-render — Extracted firstVisibleIndex as a primitive value for the     
-    useEffect dep array instead of calling getVirtualItems() inside it                               
-  File(s): src/pages/TimelinePage.tsx                                                                
-  ────────────────────────────────────────
-  #: 4
-  Fix: Triple source of truth — Removed updateMemoryFavorite, updateMemoryTags, setCurrentMemories
-    from Zustand store. Favorites/tags now call api.setFavorite()/api.setTags() +
-    queryClient.invalidateQueries()
-  File(s): src/stores/app-store.ts, src/pages/TimelinePage.tsx, OnThisDayPage.tsx, RecapsPage.tsx
-  ────────────────────────────────────────
-  #: 5
-  Fix: On This Day year-boundary — Replaced naive date diff with circular day-of-year comparison so
-    Dec 30 ± 3 correctly matches Jan 2
-  File(s): src/lib/mock-data.ts
-  ────────────────────────────────────────
-  #: 6
-  Fix: Recaps always empty — Mock data now reserves ~5% of items within the last 90 days, and date
-    range is relative to current year
-  File(s): src/lib/mock-data.ts
-  ────────────────────────────────────────
-  #: 7
-  Fix: Fake video playback — Replaced static thumbnail + icon toggle with a real <video> element with
+# SnapBack Memories
 
-    poster, native controls, and play/pause/ended handlers
-  File(s): src/components/viewer/MemoryViewerDrawer.tsx
-  ────────────────────────────────────────
-  #: 8
-  Fix: Indexing overshoot — Capped scanned at total with Math.min()
-  File(s): src/lib/api/adapter.ts
-  ────────────────────────────────────────
-  #: 9
-  Fix: Python hardcoded paths — extract_metadata.py now uses --input/--output CLI args. Fixed
-    parse_zip_uuid to split on -FINAL/-RAW suffixes. ingest_snapchat.py uses csv.writer for proper
-    escaping
-  File(s): scripts/extract_metadata.py, scripts/ingest_snapchat.py
-  ────────────────────────────────────────
-  #: 10
-  Fix: Store hardcoded mock state — Initial state now derives from USE_MOCK flag (disconnected +
-  empty
-     when in real mode)
-  File(s): src/stores/app-store.ts
-  ────────────────────────────────────────
-  #: 11
-  Fix: Search debouncing — Used useDeferredValue to defer the search query so React Query doesn't
-    refetch on every keystroke
-  File(s): src/pages/TimelinePage.tsx
-  ────────────────────────────────────────
-  #: 12
-  Fix: Stub buttons removed — Removed: Open in Finder, Shuffle, Play Highlights, Play Reel, View all,
+SnapBack is a local Snapchat memories viewer with:
+- React frontend (`src/`)
+- FastAPI backend (`backend/server.py`)
+- JSON-driven ingest pipeline (`scripts/ingest_json_to_sqlite.py`)
 
-    Incremental Update
-  File(s): MemoryViewerDrawer.tsx, OnThisDayPage.tsx, RecapsPage.tsx, ImportPage.tsx
-  ────────────────────────────────────────
-  #: 13
-  Fix: FastAPI backend — New backend/server.py that reads manifest.csv, serves media files, and
-    implements all LocalApiAdapter endpoints (health, memories, months, on-this-day, recaps,
-    favorites, tags, thumbnails, media)
-  File(s): backend/server.py, backend/requirements.txt
-  Build passes with 0 TypeScript errors.
+The canonical manifest is SQLite (`manifests/snapback.db`) with a `memories` table that the backend serves directly.
 
-  To use the real backend:
-  1. pip install -r backend/requirements.txt
-  2. python backend/server.py --manifest /path/to/manifest.csv --media /path/to/final_media
-  3. Set USE_MOCK = false in src/lib/api/adapter.ts
+## Prerequisites
+
+- Node.js 18+
+- Python 3.10+
+- `ffmpeg` and `ffprobe` on `PATH`
+- Python packages:
+  - Backend: `fastapi`, `uvicorn`
+  - Ingest image overlays: `Pillow`
+
+Install backend deps:
+
+```bash
+pip3 install -r backend/requirements.txt
+pip3 install Pillow
+```
+
+## Wrapper Commands
+
+Two wrapper scripts are available:
+
+- `npm run ingest:json` -> runs `scripts/run_ingest_json_to_sqlite.sh`
+- `npm run backend:sqlite` -> runs `scripts/run_backend_sqlite.sh`
+
+Both wrappers use environment variables so paths stay configurable.
+
+### Ingest wrapper variables
+
+- `SNAPBACK_JSON_PATH` (default: repo `mydata.../json/memories_history.json`)
+- `SNAPBACK_OUTPUT_ROOT` (default: `/tmp/snapback_work`)
+- `SNAPBACK_EXPORT_ROOT` (optional local export folder)
+- `SNAPBACK_DOWNLOAD_MODE` (`missing` | `always` | `never`, default `missing`)
+- `SNAPBACK_DB_PATH` (optional override for SQLite output path)
+- `SNAPBACK_COOKIE_FILE` (optional Netscape cookie jar)
+- `SNAPBACK_TIMEOUT_SEC` (default `120`)
+- `SNAPBACK_FFMPEG_BIN` (default `ffmpeg`)
+- `SNAPBACK_FFPROBE_BIN` (default `ffprobe`)
+
+### Backend wrapper variables
+
+- `SNAPBACK_OUTPUT_ROOT` (default: `/tmp/snapback_work`)
+- `SNAPBACK_DB_PATH` (default: `<output-root>/manifests/snapback.db`)
+- `SNAPBACK_MEDIA_ROOT` (default: `<output-root>/organized`)
+- `SNAPBACK_API_PORT` (default: `5055`)
+
+## Real Ingest (Example)
+
+```bash
+SNAPBACK_JSON_PATH="/Users/veerr_89/Work/Website/snapback-memories/mydata~1766859916254/json/memories_history.json" \
+SNAPBACK_OUTPUT_ROOT="/Volumes/Samsung_T9/SnapBack_Work_v3" \
+SNAPBACK_EXPORT_ROOT="/Volumes/Samsung_T9/Snapchat" \
+SNAPBACK_DOWNLOAD_MODE="missing" \
+npm run ingest:json
+```
+
+If download auth is needed:
+
+```bash
+SNAPBACK_COOKIE_FILE="/path/to/cookies.txt" npm run ingest:json
+```
+
+Direct CLI arg form (avoids shell env scoping issues):
+
+```bash
+npm run ingest:json -- --cookie-file /Users/veerr_89/Downloads/snapchat_cookies.txt
+```
+
+## Start Backend (SQLite mode)
+
+```bash
+SNAPBACK_OUTPUT_ROOT="/Volumes/Samsung_T9/SnapBack_Work_v3" \
+SNAPBACK_MEDIA_ROOT="/Volumes/Samsung_T9/SnapBack_Work_v3/organized" \
+npm run backend:sqlite
+```
+
+Backend base URL is `http://localhost:5055`.
+
+## Frontend
+
+Switch frontend to real backend:
+
+File: `src/lib/api/adapter.ts`
+- Set `USE_MOCK = false`
+
+Run frontend:
+
+```bash
+npm install
+npm run dev
+```
+
+## Notes
+
+- Ingest uses JSON metadata as source of truth (IDs/timestamps/location).
+- Deterministic output name format:
+  - `YYYY-MM-DD_HH-MM-SSZ__lat_lon__stable_id.ext`
+- ZIPs are flattened:
+  - Image ZIPs -> composited JPG
+  - Video ZIPs -> overlay-burned MP4
