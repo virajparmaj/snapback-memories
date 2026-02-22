@@ -1,5 +1,14 @@
 import { MemoryItem, MonthSummary } from "@/types/memory";
 
+const LOCAL_DEMO_PHOTO_ASSETS = [
+  "/demo/demo-photo-1.svg",
+  "/demo/demo-photo-2.svg",
+  "/demo/demo-photo-3.svg",
+  "/demo/demo-photo-4.svg",
+] as const;
+const LOCAL_DEMO_VIDEO_ASSET = "/demo/demo-angel-loop.mp4";
+const LOCAL_DEMO_VIDEO_THUMBNAIL = "/demo/demo-video-thumb.svg";
+
 // Locations pool for variety
 const LOCATIONS = [
   { label: "Mumbai, Maharashtra, IN", latitude: 19.076, longitude: 72.8777 },
@@ -101,7 +110,9 @@ export function generateMockMemories(count: number = 8016): MemoryItem[] {
       filename_original: isVideo
         ? `SNAP_${year}${String(month).padStart(2, "0")}${String(day).padStart(2, "0")}_${i}.mp4`
         : `SNAP_${year}${String(month).padStart(2, "0")}${String(day).padStart(2, "0")}_${i}.jpg`,
-      filepath: `/library/memories/${year}/${String(month).padStart(2, "0")}/${isVideo ? "video" : "photo"}_${i}`,
+      filepath: isVideo
+        ? LOCAL_DEMO_VIDEO_ASSET
+        : LOCAL_DEMO_PHOTO_ASSETS[i % LOCAL_DEMO_PHOTO_ASSETS.length],
       captured_at_utc: capturedDate.toISOString(),
       captured_at_local: capturedDate.toISOString(),
       timezone_hint: "America/Chicago",
@@ -121,7 +132,9 @@ export function generateMockMemories(count: number = 8016): MemoryItem[] {
       memory.duration_sec = Math.floor(random() * 60) + 1;
     }
 
-    memory.thumbnail_url = `https://picsum.photos/seed/${memory.id.slice(0, 8)}/300/300`;
+    memory.thumbnail_url = isVideo
+      ? LOCAL_DEMO_VIDEO_THUMBNAIL
+      : LOCAL_DEMO_PHOTO_ASSETS[i % LOCAL_DEMO_PHOTO_ASSETS.length];
 
     memories.push(memory);
   }

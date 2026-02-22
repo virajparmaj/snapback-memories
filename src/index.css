@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* SnapBack Design System - Snapchat-inspired dark theme */
+/* SnapBack Design System - Angel violet dark theme */
 
 @layer base {
   :root {
@@ -17,9 +17,9 @@
     --popover: 240 8% 10%; /* #1A1A20 */
     --popover-foreground: 240 5% 96%;
 
-    /* Snapchat yellow - primary accent */
-    --primary: 59 100% 50%; /* #FFFC00 */
-    --primary-foreground: 240 10% 4%;
+    /* Angel violet accent */
+    --primary: 269 84% 67%; /* #9A64F5 */
+    --primary-foreground: 0 0% 100%;
 
     /* Secondary - muted surfaces */
     --secondary: 240 8% 12%;
@@ -29,9 +29,9 @@
     --muted: 240 5% 18%;
     --muted-foreground: 240 5% 72%; /* #B7B7C2 */
 
-    /* Accent - same as primary for consistency */
-    --accent: 59 100% 50%;
-    --accent-foreground: 240 10% 4%;
+    /* Accent surfaces */
+    --accent: 269 33% 18%;
+    --accent-foreground: 269 85% 92%;
 
     /* Destructive */
     --destructive: 0 72% 51%;
@@ -40,7 +40,7 @@
     /* Borders */
     --border: 240 5% 18%; /* #2A2A33 */
     --input: 240 5% 18%;
-    --ring: 59 100% 50%;
+    --ring: 269 84% 67%;
 
     /* Radius */
     --radius: 1rem;
@@ -48,18 +48,18 @@
     /* Custom tokens */
     --surface-elevated: 240 8% 10%;
     --surface-hover: 240 8% 14%;
-    --glow-primary: 59 100% 50%;
+    --glow-primary: 269 84% 67%;
     --text-tertiary: 240 5% 55%;
 
     /* Sidebar */
     --sidebar-background: 240 8% 5%;
     --sidebar-foreground: 240 5% 96%;
-    --sidebar-primary: 59 100% 50%;
-    --sidebar-primary-foreground: 240 10% 4%;
+    --sidebar-primary: 269 84% 67%;
+    --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 240 8% 12%;
     --sidebar-accent-foreground: 240 5% 96%;
     --sidebar-border: 240 5% 18%;
-    --sidebar-ring: 59 100% 50%;
+    --sidebar-ring: 269 84% 67%;
   }
 }
 
@@ -105,7 +105,7 @@
 
   /* Text gradient */
   .text-gradient-primary {
-    background: linear-gradient(135deg, hsl(var(--primary)), hsl(59, 100%, 65%));
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(287 79% 76%));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;

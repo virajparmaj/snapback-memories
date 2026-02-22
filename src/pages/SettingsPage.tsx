@@ -98,7 +98,7 @@ export default function SettingsPage() {
               <Moon className="h-5 w-5 text-primary" />
               Theme
             </CardTitle>
-            <CardDescription>SnapBack uses a Snapchat-inspired dark theme</CardDescription>
+            <CardDescription>SnapBack uses a violet angel dark theme</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-3 gap-4">
@@ -176,7 +176,7 @@ export default function SettingsPage() {
               <p className="text-sm text-muted-foreground">
                 Your Snapchat Memories, organized and searchable — offline.
               </p>
-              <p className="text-xs text-muted-foreground mt-2">Version 1.0.0 (Mock Mode)</p>
+              <p className="text-xs text-muted-foreground mt-2">Version 1.0.0</p>
             </div>
           </CardContent>
         </Card>

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 1280" role="img" aria-label="Demo memory three">
+  <defs>
+    <linearGradient id="g3" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#120a1f"/>
+      <stop offset="100%" stop-color="#6d28d9"/>
+    </linearGradient>
+  </defs>
+  <rect width="720" height="1280" fill="url(#g3)"/>
+  <circle cx="150" cy="210" r="90" fill="#f5f3ff" fill-opacity="0.15"/>
+  <circle cx="580" cy="960" r="130" fill="#f5f3ff" fill-opacity="0.1"/>
+  <rect x="88" y="880" width="544" height="240" rx="30" fill="#120a1f" fill-opacity="0.4"/>
+  <text x="120" y="965" fill="#f5f3ff" font-size="52" font-family="Arial, sans-serif">City Stroll</text>
+  <text x="120" y="1028" fill="#ddd6fe" font-size="34" font-family="Arial, sans-serif">San Francisco</text>
+</svg>

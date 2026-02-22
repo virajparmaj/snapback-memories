@@ -14,6 +14,16 @@ import {
   getOnThisDayMemories,
   getRecentHighlights,
 } from "@/lib/mock-data";
+import {
+  createDemoMemories,
+  filterDemoMemories,
+  getDemoMediaUrl,
+  getDemoMonths,
+  getDemoOnThisDay,
+  getDemoRecentRecap,
+  getDemoThumbnailUrl,
+  paginateDemoMemories,
+} from "@/lib/demo-data";
 
 // Toggle between mock and real API
 export const USE_MOCK = false;
@@ -107,48 +117,14 @@ class MockApiAdapter implements ApiAdapter {
     filter?: MediaFilter;
     search?: string;
   }): Promise<PaginatedResponse<MemoryItem>> {
-    let filtered = [...this.memories];
+    const filtered = filterDemoMemories(this.memories, {
+      year: params.year,
+      month: params.month,
+      filter: params.filter,
+      search: params.search,
+    });
 
-    // Filter by year/month
-    if (params.year && params.month) {
-      filtered = filtered.filter(
-        (m) => m.year === params.year && m.month === params.month
-      );
-    }
-
-    // Filter by type
-    if (params.filter === "photos") {
-      filtered = filtered.filter((m) => m.type === "photo");
-    } else if (params.filter === "videos") {
-      filtered = filtered.filter((m) => m.type === "video");
-    } else if (params.filter === "favorites") {
-      filtered = filtered.filter((m) => m.favorite);
-    }
-
-    // Search
-    if (params.search) {
-      const query = params.search.toLowerCase();
-      filtered = filtered.filter(
-        (m) =>
-          m.filename_original.toLowerCase().includes(query) ||
-          m.location?.label?.toLowerCase().includes(query) ||
-          m.tags?.some((t) => t.toLowerCase().includes(query))
-      );
-    }
-
-    // Pagination
-    const limit = params.limit || 200;
-    const cursorIndex = params.cursor
-      ? filtered.findIndex((m) => m.id === params.cursor)
-      : 0;
-    const startIndex = cursorIndex === -1 ? 0 : cursorIndex;
-    const items = filtered.slice(startIndex, startIndex + limit);
-    const nextCursor =
-      startIndex + limit < filtered.length
-        ? filtered[startIndex + limit]?.id
-        : undefined;
-
-    return { items, nextCursor };
+    return paginateDemoMemories(filtered, params.cursor, params.limit || 200);
   }
 
   async getMemory(id: string): Promise<MemoryItem> {
@@ -185,43 +161,107 @@ class MockApiAdapter implements ApiAdapter {
 
   getThumbnailUrl(id: string): string {
     const memory = this.memories.find((m) => m.id === id);
-    return memory?.thumbnail_url || `https://picsum.photos/seed/${id.slice(0, 8)}/300/300`;
+    return memory ? getDemoThumbnailUrl(memory) : "/demo/demo-photo-1.svg";
   }
 
   getMediaUrl(id: string): string {
     const memory = this.memories.find((m) => m.id === id);
-    return memory?.thumbnail_url || `https://picsum.photos/seed/${id.slice(0, 8)}/800/800`;
+    return memory ? getDemoMediaUrl(memory) : "/demo/demo-photo-1.svg";
   }
 }
 
-// Real API Implementation (stub for later)
+// Real API Implementation with automatic local demo fallback
 class LocalApiAdapter implements ApiAdapter {
+  private readonly demoMemories = createDemoMemories();
+  private readonly demoById = new Map(this.demoMemories.map((memory) => [memory.id, memory]));
+  private cachedStatus: { fetchedAt: number; value: LibraryStatus } | null = null;
+  private readonly statusCacheMs = 15_000;
+
+  private async fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
+    const response = await fetch(url, init);
+    if (!response.ok) {
+      throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+    }
+    return response.json() as Promise<T>;
+  }
+
+  private async postJson(url: string, body: unknown): Promise<void> {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+    }
+  }
+
+  private async fetchLibraryStatusCached(forceRefresh = false): Promise<LibraryStatus> {
+    const now = Date.now();
+    if (
+      !forceRefresh &&
+      this.cachedStatus &&
+      now - this.cachedStatus.fetchedAt < this.statusCacheMs
+    ) {
+      return this.cachedStatus.value;
+    }
+
+    const status = await this.fetchJson<LibraryStatus>(`${API_BASE}/library/status`);
+    this.cachedStatus = { fetchedAt: now, value: status };
+    return status;
+  }
+
+  private async shouldUseDemoFallback(): Promise<boolean> {
+    try {
+      const status = await this.fetchLibraryStatusCached();
+      return !status.indexed || status.totalItems === 0;
+    } catch {
+      // If backend is unavailable, keep UI usable with local preview data.
+      return true;
+    }
+  }
+
+  private getDemoMemoriesResponse(params: {
+    year?: number;
+    month?: number;
+    cursor?: string;
+    limit?: number;
+    filter?: MediaFilter;
+    search?: string;
+  }): PaginatedResponse<MemoryItem> {
+    const filtered = filterDemoMemories(this.demoMemories, {
+      year: params.year,
+      month: params.month,
+      filter: params.filter,
+      search: params.search,
+    });
+
+    return paginateDemoMemories(filtered, params.cursor, params.limit || 200);
+  }
+
   async checkHealth() {
-    const res = await fetch(`${API_BASE}/health`);
-    return res.json();
+    return this.fetchJson<{ ok: boolean; version: string }>(`${API_BASE}/health`);
   }
 
   async getLibraryStatus(): Promise<LibraryStatus> {
-    const res = await fetch(`${API_BASE}/library/status`);
-    return res.json();
+    return this.fetchLibraryStatusCached(true);
   }
 
   async startIndexing(options: IndexingOptions): Promise<void> {
-    await fetch(`${API_BASE}/library/index`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(options),
-    });
+    await this.postJson(`${API_BASE}/library/index`, options);
+    this.cachedStatus = null;
   }
 
   async getIndexingStatus(): Promise<IndexingStatus> {
-    const res = await fetch(`${API_BASE}/library/index/status`);
-    return res.json();
+    return this.fetchJson<IndexingStatus>(`${API_BASE}/library/index/status`);
   }
 
   async getMonths(): Promise<MonthSummary[]> {
-    const res = await fetch(`${API_BASE}/months`);
-    return res.json();
+    if (await this.shouldUseDemoFallback()) {
+      return getDemoMonths(this.demoMemories);
+    }
+    return this.fetchJson<MonthSummary[]>(`${API_BASE}/months`);
   }
 
   async getMemories(params: {
@@ -232,6 +272,10 @@ class LocalApiAdapter implements ApiAdapter {
     filter?: MediaFilter;
     search?: string;
   }): Promise<PaginatedResponse<MemoryItem>> {
+    if (await this.shouldUseDemoFallback()) {
+      return this.getDemoMemoriesResponse(params);
+    }
+
     const searchParams = new URLSearchParams();
     if (params.year) searchParams.set("year", String(params.year));
     if (params.month) searchParams.set("month", String(params.month));
@@ -240,13 +284,18 @@ class LocalApiAdapter implements ApiAdapter {
     if (params.filter) searchParams.set("filter", params.filter);
     if (params.search) searchParams.set("search", params.search);
 
-    const res = await fetch(`${API_BASE}/memories?${searchParams}`);
-    return res.json();
+    return this.fetchJson<PaginatedResponse<MemoryItem>>(
+      `${API_BASE}/memories?${searchParams.toString()}`
+    );
   }
 
   async getMemory(id: string): Promise<MemoryItem> {
-    const res = await fetch(`${API_BASE}/memories/${id}`);
-    return res.json();
+    const demoMemory = this.demoById.get(id);
+    if (demoMemory) {
+      return demoMemory;
+    }
+
+    return this.fetchJson<MemoryItem>(`${API_BASE}/memories/${id}`);
   }
 
   async getOnThisDay(
@@ -254,38 +303,58 @@ class LocalApiAdapter implements ApiAdapter {
     day: number,
     window: number = 3
   ): Promise<MemoryItem[]> {
-    const res = await fetch(
+    if (await this.shouldUseDemoFallback()) {
+      return getDemoOnThisDay(this.demoMemories, month, day, window);
+    }
+
+    return this.fetchJson<MemoryItem[]>(
       `${API_BASE}/on-this-day?month=${month}&day=${day}&window=${window}`
     );
-    return res.json();
   }
 
   async getRecentRecap(days: number = 7): Promise<RecapData> {
-    const res = await fetch(`${API_BASE}/recaps/recent?days=${days}`);
-    return res.json();
+    if (await this.shouldUseDemoFallback()) {
+      return getDemoRecentRecap(this.demoMemories, days);
+    }
+
+    return this.fetchJson<RecapData>(`${API_BASE}/recaps/recent?days=${days}`);
   }
 
   async setFavorite(id: string, favorite: boolean): Promise<void> {
-    await fetch(`${API_BASE}/memories/${id}/favorite`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ favorite }),
-    });
+    const demoMemory = this.demoById.get(id);
+    if (demoMemory) {
+      demoMemory.favorite = favorite;
+      return;
+    }
+
+    await this.postJson(`${API_BASE}/memories/${id}/favorite`, { favorite });
   }
 
   async setTags(id: string, tags: string[]): Promise<void> {
-    await fetch(`${API_BASE}/memories/${id}/tags`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tags }),
-    });
+    const demoMemory = this.demoById.get(id);
+    if (demoMemory) {
+      demoMemory.tags = tags;
+      return;
+    }
+
+    await this.postJson(`${API_BASE}/memories/${id}/tags`, { tags });
   }
 
   getThumbnailUrl(id: string): string {
+    const demoMemory = this.demoById.get(id);
+    if (demoMemory) {
+      return getDemoThumbnailUrl(demoMemory);
+    }
+
     return `${API_BASE}/thumb/${id}`;
   }
 
   getMediaUrl(id: string): string {
+    const demoMemory = this.demoById.get(id);
+    if (demoMemory) {
+      return getDemoMediaUrl(demoMemory);
+    }
+
     return `${API_BASE}/media/${id}`;
   }
 }

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 1280" role="img" aria-label="Demo memory one">
+  <defs>
+    <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#221033"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <rect width="720" height="1280" fill="url(#g1)"/>
+  <circle cx="560" cy="190" r="130" fill="#fef08a" fill-opacity="0.2"/>
+  <rect x="96" y="820" width="528" height="280" rx="36" fill="#0b0b0d" fill-opacity="0.35"/>
+  <text x="120" y="910" fill="#f5f3ff" font-size="56" font-family="Arial, sans-serif">SnapBack Demo</text>
+  <text x="120" y="980" fill="#ddd6fe" font-size="36" font-family="Arial, sans-serif">Violet preview memory</text>
+</svg>

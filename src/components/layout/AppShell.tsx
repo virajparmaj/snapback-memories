@@ -6,8 +6,7 @@ import {
   Sparkles, 
   FolderInput, 
   BookOpen, 
-  Settings,
-  Ghost
+  Settings
 } from "lucide-react";
 
 export function AppShell() {
@@ -18,7 +17,12 @@ export function AppShell() {
         <div className="container flex h-14 max-w-screen-2xl items-center">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 mr-8">
-            <Ghost className="h-6 w-6 text-primary" />
+            <img
+              src="/branding/snapback-angel.png"
+              alt="SnapBack angel logo"
+              className="h-7 w-7 rounded-md object-cover"
+              loading="eager"
+            />
             <span className="font-bold text-lg text-foreground">SnapBack</span>
           </Link>
 

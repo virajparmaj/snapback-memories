@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 1280" role="img" aria-label="Demo memory four">
+  <defs>
+    <linearGradient id="g4" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2a1251"/>
+      <stop offset="100%" stop-color="#9333ea"/>
+    </linearGradient>
+  </defs>
+  <rect width="720" height="1280" fill="url(#g4)"/>
+  <rect x="70" y="120" width="580" height="1040" rx="42" fill="#f5f3ff" fill-opacity="0.08"/>
+  <path d="M130 860 C230 700 490 700 590 860" stroke="#fef08a" stroke-width="14" fill="none" stroke-linecap="round"/>
+  <text x="140" y="980" fill="#faf5ff" font-size="58" font-family="Arial, sans-serif">Golden Hour</text>
+</svg>

@@ -140,10 +140,10 @@ export default function ImportPage() {
                   </Button>
                 </>
               ) : (
-                <div className="flex items-start gap-3 p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
-                  <AlertCircle className="h-5 w-5 text-yellow-500 mt-0.5" />
+                <div className="flex items-start gap-3 p-3 bg-primary/10 rounded-lg border border-primary/30">
+                  <AlertCircle className="h-5 w-5 text-primary mt-0.5" />
                   <div>
-                    <p className="font-medium text-yellow-400">No Library Connected</p>
+                    <p className="font-medium text-primary">No Library Connected</p>
                     <p className="text-sm text-muted-foreground">
                       Connect your Snapchat memories folder to get started
                     </p>
