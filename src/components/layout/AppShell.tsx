@@ -73,6 +73,9 @@ export function AppShell() {
       <main className="flex-1">
         <Outlet />
       </main>
+      <footer className="w-full text-center text-xs opacity-60 py-6 mt-10">
+        Ideated by Viraj Parmaj
+      </footer>
     </div>
   );
 }
